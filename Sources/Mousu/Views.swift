@@ -33,7 +33,6 @@ enum MainWindowSize {
 @MainActor
 struct MainView: View {
     @Bindable var model: AppModel
-    @Environment(\.openWindow) private var openWindow
     @Environment(\.displayScale) private var displayScale
     private let sidebarWidth: CGFloat = 240
     @State private var sidebarCardWidth: CGFloat?
@@ -102,10 +101,7 @@ struct MainView: View {
         .sheet(isPresented: $model.settingsPresented) {
             AppSettingsSheet(model: model)
         }
-        .onAppear {
-            MousuAppDelegate.reopenWindow = { openWindow(id: "main") }
-            model.presentSetup()
-        }
+        .onAppear { model.presentSetup() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             model.refresh()
         }
@@ -2056,7 +2052,6 @@ private struct PausedSettingsAppearance: ViewModifier {
 struct MenuPanel: View {
     @Environment(\.menuPanelDismissal) private var menuPanelDismissal
     @Bindable var model: AppModel
-    @Environment(\.openWindow) private var openWindow
     @State private var detailDeviceID: String?
     @State private var detailScrollStatus: MenuDetailScrollStatus?
     private static let detailViewportHeight: CGFloat = 260
@@ -2139,14 +2134,15 @@ struct MenuPanel: View {
     }
 
     private func openMousu() {
+        let screen =
+            menuPanelDismissal?.window?.screen ?? panelWindow.window?.screen
+            ?? NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) }
         if let menuPanelDismissal {
             menuPanelDismissal.dismiss()
         } else {
             panelWindow.window?.close()
         }
-        AppPresence.shared.openWindow()
-        openWindow(id: "main")
-        NSApp.activate(ignoringOtherApps: true)
+        MousuAppDelegate.showMainWindow(on: screen)
     }
 
     private var header: some View {
@@ -3369,7 +3365,6 @@ struct AppSettingsView: View {
     @AppStorage("tryAreaEffect") private var effect = TryAreaEffect.initial()
     @AppStorage("crtUnlocked") private var crtUnlocked = false
     @Bindable var model: AppModel
-    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         if model.requiresSetup {
@@ -3385,8 +3380,7 @@ struct AppSettingsView: View {
                 .font(.system(size: 12)).foregroundStyle(.secondary).lineSpacing(4)
                 Button("Open setup") {
                     model.settingsPresented = false
-                    openWindow(id: "main")
-                    NSApp.activate(ignoringOtherApps: true)
+                    MousuAppDelegate.showMainWindow()
                 }
                 .buttonStyle(.borderedProminent)
             }

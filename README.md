@@ -64,6 +64,8 @@ Automatic setup is enabled by default: flat pointer response at 1×, traditional
 
 Devices with a unique identifier retain their settings across reconnects. For devices without one, choose **Use for all matching devices**. An existing shared card can also recognize unambiguous connections with the same reported model name, vendor, and pointer function. Renaming a card or overriding its connection label does not change hardware identity.
 
+**Open at login** starts Mousü in the background without opening a window or showing a Dock icon. **Open Mousü** in the menu bar brings the window to that display and the current Space.
+
 Closing the window leaves Mousü running. **Pause all** or **Quit Mousü** restores the system properties it still owns. After a force quit, reopen Mousü to recover changes; reconnect the device if needed.
 
 If Accessibility is enabled but Mousü still reports it missing after a rebuild, remove the old entry, add the current app again, and restart it.

@@ -6,8 +6,11 @@ import SwiftUI
 struct MousuApp: App {
     @NSApplicationDelegateAdaptor(MousuAppDelegate.self) private var delegate
     @State private var model = AppModel.shared
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
+        // Available even when no window or menu panel has been shown yet.
+        let _ = MainWindowPresentation.shared.registerOpener { openWindow(id: "main") }
         Window("Mousü", id: "main") {
             MainView(model: model)
                 .background(MainWindowPresence(hideDockWhenClosed: model.hideDockWhenClosed))
@@ -17,6 +20,7 @@ struct MousuApp: App {
             height: model.requiresSetup ? MainWindowSize.intro.height : MainWindowSize.main.height
         )
         .restorationBehavior(.disabled)
+        .defaultLaunchBehavior(.suppressed)
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentMinSize)
         .commands {
@@ -52,19 +56,15 @@ struct MousuApp: App {
 
 @MainActor
 final class MousuAppDelegate: NSObject, NSApplicationDelegate {
-    static var reopenWindow: (() -> Void)?
-
-    static func showMainWindow() {
-        AppPresence.shared.openWindow()
-        reopenWindow?()
-        NSApp.activate(ignoringOtherApps: true)
+    static func showMainWindow(on screen: NSScreen? = nil) {
+        MainWindowPresentation.shared.show(on: screen)
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        AppPresence.shared.hideDockWhenClosed = AppModel.shared.hideDockWhenClosed
-        AppPresence.shared.openWindow()
+        let atLogin = AppLaunch.isLoginItem(NSAppleEventManager.shared().currentAppleEvent)
+        AppPresence.shared.configureLaunch(atLogin: atLogin, hideDockWhenClosed: AppModel.shared.hideDockWhenClosed)
         AppIcon.update(paused: AppModel.shared.paused)
-        NSApplication.shared.activate(ignoringOtherApps: true)
+        if !atLogin { Self.showMainWindow() }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

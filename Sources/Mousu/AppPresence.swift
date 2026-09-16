@@ -6,7 +6,8 @@ import SwiftUI
 final class AppPresence {
     static let shared = AppPresence()
     private let setPolicy: (NSApplication.ActivationPolicy) -> Void
-    private(set) var windowOpen = true
+    private(set) var windowOpen = false
+    private var quietLoginLaunch = false
     private var lastPolicy: NSApplication.ActivationPolicy?
     var hideDockWhenClosed = true {
         didSet { updatePolicy() }
@@ -20,7 +21,13 @@ final class AppPresence {
         self.setPolicy = setPolicy
     }
 
+    func configureLaunch(atLogin: Bool, hideDockWhenClosed: Bool) {
+        quietLoginLaunch = atLogin
+        self.hideDockWhenClosed = hideDockWhenClosed
+    }
+
     func openWindow() {
+        quietLoginLaunch = false
         windowOpen = true
         updatePolicy()
     }
@@ -31,7 +38,8 @@ final class AppPresence {
     }
 
     private func updatePolicy() {
-        let policy: NSApplication.ActivationPolicy = hideDockWhenClosed && !windowOpen ? .accessory : .regular
+        let hidesDock = quietLoginLaunch || (hideDockWhenClosed && !windowOpen)
+        let policy: NSApplication.ActivationPolicy = hidesDock ? .accessory : .regular
         guard policy != lastPolicy else { return }
         lastPolicy = policy
         setPolicy(policy)
@@ -57,7 +65,7 @@ struct MainWindowPresence: NSViewRepresentable {
             super.viewDidMoveToWindow()
             NotificationCenter.default.removeObserver(self)
             guard let window else { return }
-            presence.openWindow()
+            MainWindowPresentation.shared.attach(window)
             NotificationCenter.default.addObserver(
                 self, selector: #selector(windowClosed), name: NSWindow.willCloseNotification, object: window)
             NotificationCenter.default.addObserver(
