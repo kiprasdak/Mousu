@@ -60,6 +60,12 @@ h1 .hero-secondary { color: var(--muted); margin-left: .1em; }
 .download-section h2 { margin: 0 0 25px; font-size: 30px; line-height: 1.2; letter-spacing: -.8px; font-weight: 600; }
 .permission-note { max-width: 360px; margin: 18px auto 0; color: var(--muted); font-size: 13px; line-height: 20px; text-wrap: pretty; }
 .permission-note a { color: var(--blue); text-decoration: underline; text-underline-offset: 3px; }
+.project-link { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 44px; color: var(--muted); font-size: 13px; line-height: 20px; }
+.project-link:hover, .project-link:focus-visible { color: var(--ink); }
+.header-github { font-size: 14px; font-weight: 500; }
+.project-links { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; column-gap: 24px; margin-top: 22px; }
+.project-links .project-link { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line); }
+.project-links .project-link:hover, .project-links .project-link:focus-visible { text-decoration-color: currentColor; }
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
