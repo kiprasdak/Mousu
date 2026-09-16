@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fafbfc" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#101114" media="(prefers-color-scheme: dark)">
+  <meta name="description" content="Mousü 0.9 beta. Per-device pointer speed, acceleration, scroll direction, and wheel steps for macOS.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta property="og:title" content="Mousü — Pointer control. Per device.">
+  <meta property="og:description" content="Set speed, acceleration, and scrolling for each mouse, trackball, or trackpad. A native macOS utility. Version 0.9 beta.">
+  <meta property="og:type" content="website">
+  <title>Mousü — Pointer control. Per device.</title>
+  <link rel="icon" type="image/png" href="assets/mousu-favicon.png" sizes="32x32">
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
+  <script src="icons.js" defer></script>
+  <script src="motion.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="page-surface">
+  <canvas class="hero-field" aria-hidden="true"></canvas>
+  <header class="site-header wrap">
+    <span class="wordmark">Mousü</span>
+  </header>
+
+  <main id="main" tabindex="-1">
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="hero-copy wrap">
+        <button class="hero-icon" type="button" tabindex="-1" aria-label="Replay icon animation" disabled>
+          <span class="icon-body">
+            <span class="icon-parts" aria-hidden="true">
+              <span class="icon-piece icon-tile"></span>
+              <span class="icon-piece icon-ray" data-part="top"></span>
+              <span class="icon-piece icon-ray" data-part="wink"></span>
+              <span class="icon-piece icon-ray" data-part="upper-right"></span>
+              <span class="icon-piece icon-ray" data-part="left"></span>
+              <span class="icon-piece icon-ray" data-part="right"></span>
+              <span class="icon-piece icon-ray" data-part="lower-left"></span>
+              <span class="icon-piece icon-pointer" data-part="pointer"></span>
+            </span>
+            <span class="icon-smear" aria-hidden="true">
+              <img draggable="false" src="assets/mousu-icon-320.webp" width="80" height="80" alt="">
+              <img draggable="false" src="assets/mousu-icon-320.webp" width="80" height="80" alt="">
+            </span>
+            <img class="icon-active" draggable="false" src="assets/mousu-icon-160.webp" srcset="assets/mousu-icon-160.webp 160w, assets/mousu-icon-320.webp 320w" sizes="(max-width: 600px) 72px, 80px" width="80" height="80" alt="">
+            <img draggable="false" class="icon-paused" src="assets/mousu-icon-paused-320.webp" width="80" height="80" alt="" decoding="async">
+          </span>
+        </button>
+        <p class="hero-name"><span data-ripple-text>Mousü</span><span class="hero-beta" aria-hidden="true">BETA</span></p>
+        <h1 id="hero-title"><span data-ripple-text>Pointer control.</span><br class="mobile-break"> <span class="hero-secondary" data-ripple-text>Per device.</span></h1>
+        <p class="hero-description" data-ripple-text>Set speed, acceleration, and scrolling for each mouse, trackball, or trackpad.</p>
+        <a class="button primary" href="https://github.com/kiprasdak/Mousu/releases/download/v0.9.0-beta.1/Mousu.dmg">Download</a>
+        <p class="platform-note">0.9 beta <span aria-hidden="true">·</span> macOS 26+ <span aria-hidden="true">·</span> Apple Silicon</p>
+      </div>
+      <figure class="macbook-stage" aria-label="Mousü on a MacBook">
+        <picture class="macbook-screen">
+          <source type="image/webp" srcset="assets/mousu-dark-1512.webp 1512w, assets/mousu-dark-2268.webp 2268w, assets/mousu-dark.webp 3024w" sizes="(max-width: 600px) 78.34vw, (max-width: 1192px) calc(78.34vw - 25.07px), 909px" media="(prefers-color-scheme: dark)">
+          <source srcset="assets/mousu-dark.png" media="(prefers-color-scheme: dark)">
+          <source type="image/webp" srcset="assets/mousu-light-1512.webp 1512w, assets/mousu-light-2268.webp 2268w, assets/mousu-light.webp 3024w" sizes="(max-width: 600px) 78.34vw, (max-width: 1192px) calc(78.34vw - 25.07px), 909px">
+          <img draggable="false" src="assets/mousu-light.png" width="3024" height="1964" alt="Mousü showing separate movement and scrolling settings for a mouse and a trackball." fetchpriority="high">
+        </picture>
+        <picture class="macbook-hardware">
+          <source type="image/webp" srcset="assets/macbook-dark-1930.webp 1930w, assets/macbook-dark.webp 3860w" sizes="(max-width: 600px) 100vw, (max-width: 1192px) calc(100vw - 32px), 1160px" media="(prefers-color-scheme: dark)">
+          <source srcset="assets/macbook-dark.png" media="(prefers-color-scheme: dark)">
+          <source type="image/webp" srcset="assets/macbook-silver-1930.webp 1930w, assets/macbook-silver.webp 3860w" sizes="(max-width: 600px) 100vw, (max-width: 1192px) calc(100vw - 32px), 1160px">
+          <img draggable="false" src="assets/macbook-silver.png" width="3860" height="2540" alt="" fetchpriority="high">
+        </picture>
+        <span class="camera-light" aria-hidden="true">
+          <img class="camera-light-hdr" draggable="false" src="assets/camera-light-hdr.png" width="16" height="16" alt="">
+        </span>
+      </figure>
+    </section>
+
+    <section class="showcase showcase-menu wrap" aria-labelledby="menu-bar-title">
+      <div class="showcase-copy">
+        <h2 id="menu-bar-title">In your menu bar.</h2>
+        <p>Change settings or pause individual devices without opening the main window.</p>
+      </div>
+      <figure class="showcase-detail">
+        <picture>
+          <source type="image/webp" srcset="assets/mousu-menu-bar-detail-dark-692.webp 692w, assets/mousu-menu-bar-detail-dark-1038.webp 1038w, assets/mousu-menu-bar-detail-dark.webp 1384w" sizes="(max-width: 464px) calc(100vw - 44px), 420px" media="(prefers-color-scheme: dark)">
+          <source srcset="assets/mousu-menu-bar-detail-dark.png" media="(prefers-color-scheme: dark)">
+          <source type="image/webp" srcset="assets/mousu-menu-bar-detail-light-692.webp 692w, assets/mousu-menu-bar-detail-light-1038.webp 1038w, assets/mousu-menu-bar-detail-light.webp 1384w" sizes="(max-width: 464px) calc(100vw - 44px), 420px">
+          <img draggable="false" src="assets/mousu-menu-bar-detail-light.png" width="1384" height="1240" alt="The top-right corner of the Mac desktop, with Mousü’s menu bar icon, status icons, date and time above its open device controls." loading="lazy" decoding="async">
+        </picture>
+      </figure>
+    </section>
+
+    <section class="download-section wrap" aria-labelledby="download-title">
+      <h2 id="download-title">Mousü for macOS</h2>
+      <a class="button primary" href="https://github.com/kiprasdak/Mousu/releases/download/v0.9.0-beta.1/Mousu.dmg">Download</a>
+      <p class="platform-note">0.9 beta <span aria-hidden="true">·</span> macOS 26+ <span aria-hidden="true">·</span> Apple Silicon</p>
+      <p class="permission-note">Requires Accessibility permission. This beta is not notarized. <a href="https://github.com/kiprasdak/Mousu#install">Installation help</a></p>
+    </section>
+  </main>
+  </div>
+
+
+</body>
+</html>

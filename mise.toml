@@ -1,0 +1,27 @@
+[tools]
+swift = "6.3.3"
+
+[env]
+SDKROOT = "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk"
+DEVELOPER_DIR = "/Library/Developer/CommandLineTools"
+MACOSX_DEPLOYMENT_TARGET = "26.0"
+
+[tasks.doctor]
+description = "Verify Apple Silicon, Swift 6.3.3, and the exact macOS 26.5 SDK"
+run = "./scripts/doctor"
+
+[tasks.check]
+description = "Check Swift formatting and whitespace without rewriting files"
+run = "./scripts/check"
+
+[tasks.build]
+description = "Build the native executable (debug by default)"
+run = "./scripts/build"
+
+[tasks.bundle]
+description = "Build and ad-hoc sign dist/Mousü.app"
+run = "./scripts/bundle"
+
+[tasks.run]
+description = "Build the application bundle and open Mousu"
+run = "./scripts/run"

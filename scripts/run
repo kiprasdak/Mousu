@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+MOUSU_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+"$MOUSU_SCRIPT_DIR/bundle"
+open "$MOUSU_SCRIPT_DIR/../dist/Mousü.app"

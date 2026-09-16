@@ -1,0 +1,17 @@
+#!/bin/bash
+set -euo pipefail
+source "$(dirname "$0")/environment.sh"
+MOUSU_SHADER_DIR="$MOUSU_ROOT/.build/canvas-shaders"
+mkdir -p "$MOUSU_SHADER_DIR"
+# Export the single shader source used by SwiftPM and compile it ahead of time for bundles.
+python3 - "$MOUSU_ROOT/Sources/Mousu/TryCanvasShaders.swift" "$MOUSU_SHADER_DIR/TryCanvas.metal" <<'PY'
+from pathlib import Path
+import sys
+source = Path(sys.argv[1]).read_text().split('static let source = #"""', 1)[1].rsplit('"""#', 1)[0]
+Path(sys.argv[2]).write_text(source)
+PY
+MOUSU_SHADER_DEVELOPER_DIR="${MOUSU_XCODE_DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+DEVELOPER_DIR="$MOUSU_SHADER_DEVELOPER_DIR" xcrun -sdk macosx metal -std=metal3.1 -O2 -c \
+    "$MOUSU_SHADER_DIR/TryCanvas.metal" -o "$MOUSU_SHADER_DIR/TryCanvas.air"
+DEVELOPER_DIR="$MOUSU_SHADER_DEVELOPER_DIR" xcrun -sdk macosx metallib \
+    "$MOUSU_SHADER_DIR/TryCanvas.air" -o "$MOUSU_SHADER_DIR/TryCanvas.metallib"

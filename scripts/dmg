@@ -1,0 +1,38 @@
+#!/bin/bash
+set -euo pipefail
+source "$(dirname "$0")/environment.sh"
+if [[ "$#" -ne 0 ]]; then
+    echo "Usage: $0" >&2
+    exit 1
+fi
+MOUSU_PYTHON="${MOUSU_PYTHON:-python3}"
+if ! "$MOUSU_PYTHON" -c 'import sys; sys.exit(sys.version_info < (3, 10))'; then
+    echo "DMG packaging requires Python 3.10+. Set MOUSU_PYTHON to its executable." >&2
+    exit 1
+fi
+MOUSU_DMG_ENV="$MOUSU_ROOT/.build/dmg-tools"
+MOUSU_DMG_REQUIREMENTS="$MOUSU_ROOT/scripts/dmg-requirements.txt"
+MOUSU_DMG_LOCK="$(shasum -a 256 "$MOUSU_DMG_REQUIREMENTS" | cut -d ' ' -f 1)"
+if [[ ! -x "$MOUSU_DMG_ENV/bin/python3" ]]; then
+    "$MOUSU_PYTHON" -m venv "$MOUSU_DMG_ENV"
+fi
+if [[ ! -f "$MOUSU_DMG_ENV/.requirements-sha256" ]] || \
+   [[ "$(cat "$MOUSU_DMG_ENV/.requirements-sha256")" != "$MOUSU_DMG_LOCK" ]]; then
+    "$MOUSU_DMG_ENV/bin/python3" -m pip install --disable-pip-version-check --require-hashes -r "$MOUSU_DMG_REQUIREMENTS"
+    printf '%s\n' "$MOUSU_DMG_LOCK" > "$MOUSU_DMG_ENV/.requirements-sha256"
+fi
+"$MOUSU_ROOT/scripts/bundle" release
+MOUSU_DMG_STAGE="$(mktemp -d "$MOUSU_ROOT/.build/dmg-stage.XXXXXX")"
+trap 'rm -rf "$MOUSU_DMG_STAGE"' EXIT
+MOUSU_APP="$MOUSU_ROOT/dist/Mousü.app"
+"$MOUSU_SWIFTC" -sdk "$SDKROOT" -target "$MOUSU_TRIPLE" -framework AppKit \
+    "$MOUSU_ROOT/scripts/RenderDMG.swift" -o "$MOUSU_DMG_STAGE/render-dmg"
+"$MOUSU_DMG_STAGE/render-dmg" "$MOUSU_APP" "$MOUSU_DMG_STAGE"
+"$MOUSU_DMG_ENV/bin/dmgbuild" -s "$MOUSU_ROOT/scripts/dmg-settings.py" \
+    -D app="$MOUSU_APP" -D background="$MOUSU_DMG_STAGE/background.png" \
+    "Mousü" "$MOUSU_DMG_STAGE/Mousu.dmg"
+hdiutil verify "$MOUSU_DMG_STAGE/Mousu.dmg"
+mv -f "$MOUSU_DMG_STAGE/Mousu.dmg" "$MOUSU_ROOT/dist/Mousu.dmg"
+cp "$MOUSU_DMG_STAGE/preview.png" "$MOUSU_ROOT/dist/Mousu-installer-preview.png"
+(cd "$MOUSU_ROOT/dist" && shasum -a 256 Mousu.dmg > SHA256SUMS)
+printf 'Built %s\n' "$MOUSU_ROOT/dist/Mousu.dmg"

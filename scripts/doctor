@@ -1,0 +1,18 @@
+#!/bin/bash
+set -euo pipefail
+source "$(dirname "$0")/environment.sh"
+printf 'Swift: %s\nSDK: %s (%s)\nTarget: %s\nHost: macOS %s (%s)\n' \
+    "$MOUSU_SWIFT_VERSION" "$MOUSU_SDK_VERSION" "$SDKROOT" "$MOUSU_TRIPLE" \
+    "$(sw_vers -productVersion)" "$(uname -m)"
+for MOUSU_REQUIRED in /usr/bin/codesign /usr/bin/plutil; do
+    if [[ ! -x "$MOUSU_REQUIRED" ]]; then
+        echo "Missing system build tool: $MOUSU_REQUIRED" >&2
+        exit 1
+    fi
+done
+MOUSU_XCODE_DEVELOPER_DIR="${MOUSU_XCODE_DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+if [[ ! -x "$MOUSU_XCODE_DEVELOPER_DIR/usr/bin/actool" ]]; then
+    echo "Missing Xcode asset compiler. Install Xcode or set MOUSU_XCODE_DEVELOPER_DIR." >&2
+    exit 1
+fi
+echo "Toolchain, SDK, and icon compiler checks passed."

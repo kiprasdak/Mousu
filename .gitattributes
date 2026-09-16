@@ -1,0 +1,2 @@
+# Keep the checksum-pinned upstream database byte-for-byte, including its three trailing spaces.
+Resources/DeviceDatabase/usb.ids whitespace=-blank-at-eol

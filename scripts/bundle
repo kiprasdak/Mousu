@@ -1,0 +1,65 @@
+#!/bin/bash
+set -euo pipefail
+source "$(dirname "$0")/environment.sh"
+MOUSU_CONFIGURATION="${1:-release}"
+if [[ "$#" -gt 1 || ( "$MOUSU_CONFIGURATION" != "debug" && "$MOUSU_CONFIGURATION" != "release" ) ]]; then
+    echo "Usage: $0 [debug|release]" >&2
+    exit 1
+fi
+# Asset compilation requires full Xcode; retain the pinned CLT SDK for Swift.
+MOUSU_XCODE_DEVELOPER_DIR="${MOUSU_XCODE_DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+MOUSU_ACTOOL="$MOUSU_XCODE_DEVELOPER_DIR/usr/bin/actool"
+if [[ ! -x "$MOUSU_ACTOOL" ]]; then
+    echo "Xcode is required to compile the Liquid Glass icon. Install Xcode or set MOUSU_XCODE_DEVELOPER_DIR." >&2
+    exit 1
+fi
+mkdir -p "$MOUSU_ROOT/.build"
+MOUSU_ICON_OUTPUT="$(mktemp -d "$MOUSU_ROOT/.build/icon-assets.XXXXXX")"
+MOUSU_BUNDLE_STAGE="$(mktemp -d "$MOUSU_ROOT/.build/app-bundle.XXXXXX")"
+trap 'rm -rf "$MOUSU_ICON_OUTPUT" "$MOUSU_BUNDLE_STAGE"' EXIT
+DEVELOPER_DIR="$MOUSU_XCODE_DEVELOPER_DIR" "$MOUSU_ACTOOL" \
+    "$MOUSU_ROOT/Resources/Mousu.icon" "$MOUSU_ROOT/Resources/MousuPaused.icon" --compile "$MOUSU_ICON_OUTPUT" \
+    --platform macosx --minimum-deployment-target 26.0 --target-device mac \
+    --app-icon Mousu --alternate-app-icon MousuPaused --include-all-app-icons --output-partial-info-plist "$MOUSU_ICON_OUTPUT/Info.plist" \
+    --output-format human-readable-text
+[[ -s "$MOUSU_ICON_OUTPUT/Assets.car" && -s "$MOUSU_ICON_OUTPUT/Mousu.icns" ]]
+"$MOUSU_SWIFT" build --sdk "$SDKROOT" --triple "$MOUSU_TRIPLE" -c "$MOUSU_CONFIGURATION"
+MOUSU_BIN_PATH="$("$MOUSU_SWIFT" build --sdk "$SDKROOT" --triple "$MOUSU_TRIPLE" -c "$MOUSU_CONFIGURATION" --show-bin-path)"
+MOUSU_APP="$MOUSU_BUNDLE_STAGE/Mousü.app"
+mkdir -p "$MOUSU_APP/Contents/MacOS" "$MOUSU_APP/Contents/Resources"
+cp "$MOUSU_BIN_PATH/Mousu" "$MOUSU_APP/Contents/MacOS/Mousu"
+# SwiftPM's catalog resource bundle must accompany the executable in distribution.
+[[ -d "$MOUSU_BIN_PATH/Mousu_MousuCore.bundle" ]]
+cp -R "$MOUSU_BIN_PATH/Mousu_MousuCore.bundle" "$MOUSU_APP/Contents/Resources/"
+cp -R "$MOUSU_ROOT/Resources/DeviceDatabase" "$MOUSU_APP/Contents/Resources/"
+cp "$MOUSU_ROOT/scripts/update-device-database.py" "$MOUSU_APP/Contents/Resources/DeviceDatabase/"
+"$MOUSU_ROOT/scripts/compile-canvas-shaders"
+cp "$MOUSU_ROOT/.build/canvas-shaders/TryCanvas.metallib" "$MOUSU_APP/Contents/Resources/"
+cp "$MOUSU_ROOT/Resources/Info.plist" "$MOUSU_APP/Contents/Info.plist"
+cp "$MOUSU_ROOT/LICENSE" "$MOUSU_APP/Contents/Resources/LICENSE"
+cp "$MOUSU_ROOT/THIRD_PARTY_NOTICES.md" "$MOUSU_APP/Contents/Resources/THIRD_PARTY_NOTICES.md"
+printf 'APPL????' > "$MOUSU_APP/Contents/PkgInfo"
+cp "$MOUSU_ICON_OUTPUT/Assets.car" "$MOUSU_ICON_OUTPUT/Mousu.icns" "$MOUSU_APP/Contents/Resources/"
+# Use the icon metadata emitted by the same compiler that produced Assets.car.
+/usr/libexec/PlistBuddy -c 'Delete :CFBundleIconFile' "$MOUSU_APP/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Merge $MOUSU_ICON_OUTPUT/Info.plist" "$MOUSU_APP/Contents/Info.plist"
+/usr/bin/plutil -lint "$MOUSU_APP/Contents/Info.plist"
+# Finder metadata inherited by copied source files invalidates macOS code signatures.
+# Clear it only from this build-owned application, never from source or user files.
+/usr/bin/xattr -cr "$MOUSU_APP"
+/usr/bin/codesign --force --sign - --options runtime --timestamp=none "$MOUSU_APP"
+/usr/bin/codesign --verify --deep --strict --verbose=2 "$MOUSU_APP"
+# Replace only the build output after the new bundle has passed verification.
+mkdir -p "$MOUSU_ROOT/dist"
+MOUSU_FINAL_APP="$MOUSU_ROOT/dist/Mousü.app"
+if [[ -e "$MOUSU_FINAL_APP" ]]; then
+    mv "$MOUSU_FINAL_APP" "$MOUSU_BUNDLE_STAGE/previous.app"
+fi
+if ! mv "$MOUSU_APP" "$MOUSU_FINAL_APP"; then
+    if [[ -e "$MOUSU_BUNDLE_STAGE/previous.app" ]]; then
+        mv "$MOUSU_BUNDLE_STAGE/previous.app" "$MOUSU_FINAL_APP"
+    fi
+    exit 1
+fi
+touch "$MOUSU_FINAL_APP"
+printf 'Built %s (%s)\n' "$MOUSU_FINAL_APP" "$MOUSU_CONFIGURATION"
