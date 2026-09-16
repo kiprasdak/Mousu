@@ -104,7 +104,7 @@ func render(scale: Int, preview: Bool) -> NSBitmapImageRep {
     blue.withAlphaComponent(0.75).setStroke()
     outgoing.stroke()
     text(
-        "0.9 beta  ·  macOS 26+  ·  Apple Silicon", y: 80, size: 12,
+        "0.9 beta 2  ·  macOS 26+  ·  Apple Silicon", y: 80, size: 12,
         weight: .regular, color: muted)
 
     if preview {

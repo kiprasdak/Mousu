@@ -4,7 +4,7 @@
 
 Per-device pointer and scrolling controls for external mice, trackballs, and trackpads. Native SwiftUI/AppKit app with an optional menu bar panel. The built-in trackpad keeps its macOS settings.
 
-**0.9 beta · macOS 26 or later · Apple Silicon**
+**0.9 beta 2 · macOS 26 or later · Apple Silicon**
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="website/assets/mousu-dark-1512.webp">
@@ -22,7 +22,7 @@ Device support depends on the identity and capabilities macOS exposes. Unknown o
 
 ## Install
 
-[Download Mousü 0.9 beta](https://github.com/kiprasdak/Mousu/releases/download/v0.9.0-beta.1/Mousu.dmg) and open the disk image. Drag **Mousü** to **Applications**, eject the image, then open Mousü from Applications.
+[Download Mousü 0.9 beta 2](https://github.com/kiprasdak/Mousu/releases/download/v0.9.0-beta.2/Mousu.dmg) and open the disk image. Drag **Mousü** to **Applications**, eject the image, then open Mousü from Applications.
 
 This beta is ad-hoc signed and **not notarized**. If macOS blocks it, first attempt to open it, then go to **System Settings → Privacy & Security → Open Anyway**. See [Apple's instructions](https://support.apple.com/en-gb/102445). Grant **Accessibility** when Mousü asks and finish setup.
 
