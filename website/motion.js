@@ -15,14 +15,35 @@
   const ctx = canvas?.getContext('2d');
   if (!ctx || !surface || !copy || !body || !Element.prototype.animate) return;
 
-  // A missing HDR texture leaves the ordinary green dot intact.
-  cameraLight?.querySelector('.camera-light-hdr')?.decode()
-    .then(() => { cameraLight.dataset.hdrReady = ''; }).catch(() => {});
-
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
   const forced = matchMedia('(forced-colors: active)');
   const dark = matchMedia('(prefers-color-scheme: dark)');
   const contrast = matchMedia('(prefers-contrast: more)');
+
+  // Even a hidden HDR image can change display tone mapping. Never load it on
+  // other platforms; desktop-mode iPads also identify as Macs, but have touch.
+  const hints = navigator.userAgentData;
+  const isMac = hints
+    ? hints.platform === 'macOS' && hints.mobile === false
+    : /^Mac/.test(navigator.platform) && /Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints === 0;
+  const hdrTexture = cameraLight?.querySelector('.camera-light-hdr');
+  if (isMac && hdrTexture && CSS.supports('dynamic-range-limit', 'no-limit')) {
+    const highRange = matchMedia('(dynamic-range: high)');
+    let decoded = false;
+    const updateHDR = () => {
+      const enabled = highRange.matches && !reduce.matches && !forced.matches;
+      cameraLight.toggleAttribute('data-hdr-ready', enabled && decoded);
+      if (enabled && !hdrTexture.hasAttribute('src')) {
+        hdrTexture.src = hdrTexture.dataset.hdrSrc;
+        hdrTexture.decode().then(() => { decoded = true; updateHDR(); }).catch(() => {});
+      }
+    };
+    highRange.addEventListener('change', updateHDR);
+    reduce.addEventListener('change', updateHDR);
+    forced.addEventListener('change', updateHDR);
+    updateHDR();
+  }
+
   const sources = [...copy.querySelectorAll('[data-ripple-text]')];
   const layer = document.createElement('div');
   layer.className = 'ripple-type';

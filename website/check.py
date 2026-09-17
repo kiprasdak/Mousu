@@ -37,7 +37,7 @@ class Page(HTMLParser):
             if identifier in self.ids:
                 self.errors.append(f"{self.path.name}: duplicate ID {identifier!r}")
             self.ids.add(identifier)
-        for attribute in ("href", "src", "poster"):
+        for attribute in ("href", "src", "poster", "data-hdr-src"):
             if attribute in values:
                 self.references.append((values[attribute] or "", tag != "a"))
         if "srcset" in values:

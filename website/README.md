@@ -38,5 +38,6 @@ python3 website/render-camera-light.py # HDR camera texture; standard library on
 ```
 
 The page follows system appearance and motion preferences. Generation 26 icons
-are the fallback when the browser cannot identify macOS 27. HDR camera brightness
-depends on browser and display support; other displays use the normal green dot.
+are the fallback when the browser cannot identify macOS 27. The HDR camera texture
+loads only on identified Macs with browser and HDR display support. Other devices
+use the normal green dot.
