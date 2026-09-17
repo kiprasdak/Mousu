@@ -25,10 +25,11 @@ public struct PreferencesStore: Sendable {
     }
 
     public func load() throws -> Preferences {
-        guard FileManager.default.fileExists(atPath: url.path) else { return Preferences() }
         let data: Data
         do {
             data = try Data(contentsOf: url)
+        } catch CocoaError.fileReadNoSuchFile {
+            return Preferences()
         } catch {
             throw PreferencesStoreError.unreadable(error.localizedDescription)
         }
@@ -40,9 +41,8 @@ public struct PreferencesStore: Sendable {
             throw PreferencesStoreError.unsupportedVersion(preferences.version)
         }
         // A caller that falls back to defaults after a failed load must not destroy the source.
-        if FileManager.default.fileExists(atPath: url.path) {
-            _ = try load()
-        }
+        // Only a genuinely missing file is empty; inaccessible directories are not.
+        _ = try load()
         var validated = preferences
         validated.normalize()
         try validated.validateModelProfiles()
@@ -56,7 +56,8 @@ public struct PreferencesStore: Sendable {
                 at: url.deletingLastPathComponent(), withIntermediateDirectories: true,
                 attributes: [.posixPermissions: 0o700]
             )
-            try data.write(to: url, options: [.atomic, .completeFileProtectionUnlessOpen])
+            // A login helper needs to reopen settings throughout the user session.
+            try data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
         } catch {
             throw PreferencesStoreError.writeFailed(error.localizedDescription)

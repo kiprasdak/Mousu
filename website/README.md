@@ -15,7 +15,7 @@ Open <http://127.0.0.1:8080>.
 
 ## Download and deployment
 
-Both Download links in `index.html` point directly to the 0.9 beta DMG on
+Both Download links in `index.html` point directly to the current beta DMG on
 GitHub Releases and work without JavaScript. For each release, update both URLs
 and the version/requirements together. Beta links use an explicit tag because
 GitHub's latest-release shortcut excludes prereleases. Publish and verify the

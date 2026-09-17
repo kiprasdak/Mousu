@@ -46,6 +46,46 @@ final class PreferencesWriter: @unchecked Sendable {
         return lock.withLock { failure }
     }
 
+    /// Retry the current in-memory settings after a failure. Clearing the failure
+    /// is conditional on a successful durable write, never just a readable file.
+    func retry(_ preferences: Preferences) async -> String? {
+        await withCheckedContinuation { continuation in
+            queue.async {
+                guard self.lock.withLock({ self.failure != nil }) else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                let message: String?
+                do {
+                    try self.save(preferences)
+                    message = nil
+                } catch {
+                    message = error.localizedDescription
+                }
+                self.lock.withLock { self.failure = message }
+                continuation.resume(returning: message)
+            }
+        }
+    }
+
+    /// Startup recovery uses the same queue so shutdown waits for it before
+    /// releasing the single-instance lock, just as it does for ordinary writes.
+    func reload(from store: PreferencesStore) async throws -> Preferences {
+        try await withCheckedThrowingContinuation { continuation in
+            queue.async {
+                do {
+                    let preferences = try store.load()
+                    try self.save(preferences)
+                    self.lock.withLock { self.failure = nil }
+                    continuation.resume(returning: preferences)
+                } catch {
+                    self.lock.withLock { self.failure = error.localizedDescription }
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
     private func drain() {
         while let snapshot = lock.withLock({ () -> Preferences? in
             guard let next = pending else {

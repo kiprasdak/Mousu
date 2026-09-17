@@ -98,6 +98,10 @@ final class AppModel {
     var status = "Ready"
     var detail = "Settings apply to external pointer devices."
     var errorMessage: String?
+    private(set) var settingsStorageError: String?
+    private(set) var retryingSettingsStorage = false
+    var canRetrySettingsStorage: Bool { store != nil && lockFD >= 0 && !quitInProgress && !stopped }
+    private var storageHealthy: Bool { settingsStorageError == nil }
     private var preferences = Preferences() { didSet { invalidateCatalog() } }
     private var catalogRevision: UInt64 = 0
     @ObservationIgnored private var cachedCatalog: (revision: UInt64, entries: [CatalogDevice])?
@@ -120,7 +124,9 @@ final class AppModel {
     @ObservationIgnored private var suspended = false
     @ObservationIgnored private var quitInProgress = false
     @ObservationIgnored private var stopped = false
-    @ObservationIgnored private var storageHealthy = true
+    @ObservationIgnored private var preferencesLoaded = false
+    @ObservationIgnored private var settingsRecoveryTask: Task<Void, Never>?
+    @ObservationIgnored private var nextSettingsRetry = Date.distantPast
     @ObservationIgnored private var lockFD: Int32 = -1
 
     var selectedDevice: DeviceInfo? { devices.first { $0.id == selectedID } }
@@ -732,14 +738,13 @@ final class AppModel {
             }
             let created = PreferencesStore(url: directory.appendingPathComponent("preferences.json"))
             store = created
-            preferences = try created.load()
             preferencesWriter = PreferencesWriter(store: created) { [weak self] message in
                 Task { @MainActor [weak self] in self?.preferencesSaveFailed(message) }
             }
+            preferences = try created.load()
+            preferencesLoaded = true
         } catch {
-            storageHealthy = false
-            errorMessage =
-                "Device control is paused. Your saved settings are unchanged.\n\n\(error.localizedDescription)"
+            settingsStorageError = error.localizedDescription
         }
         setupFlow = SetupFlow(
             hasCompletedSetup: preferences.hasCompletedSetup, permissionGranted: AXIsProcessTrusted(),
@@ -772,6 +777,7 @@ final class AppModel {
             MainActor.assumeIsolated { self?.refresh() }
         }
         apply()
+        persist()
     }
 
     func editProfileSettings(_ profile: DeviceProfile, for id: UInt64) {
@@ -898,6 +904,7 @@ final class AppModel {
 
     func refresh() {
         guard !stopped else { return }
+        if !suspended && Date() >= nextSettingsRetry { retrySettingsStorage() }
         // Permission loss stops control immediately, without waiting for discovery.
         let granted = AXIsProcessTrusted()
         if setupFlow.permissionGranted != granted {
@@ -971,10 +978,59 @@ final class AppModel {
 
     private func preferencesSaveFailed(_ message: String) {
         guard !stopped else { return }
-        storageHealthy = false
+        if settingsStorageError != message { NSLog("Mousü settings unavailable: %@", message) }
+        settingsStorageError = message
+        nextSettingsRetry = Date().addingTimeInterval(5)
         inputEditCommit.cancel()
-        errorMessage = "Device control is paused.\n\n\(message)"
         apply()
+    }
+
+    func retrySettingsStorage() {
+        guard !storageHealthy, canRetrySettingsStorage, !retryingSettingsStorage,
+            let store, let preferencesWriter
+        else { return }
+        retryingSettingsStorage = true
+        nextSettingsRetry = Date().addingTimeInterval(5)
+        settingsRecoveryTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer {
+                retryingSettingsStorage = false
+                settingsRecoveryTask = nil
+            }
+            guard !stopped, !quitInProgress, !Task.isCancelled else { return }
+            do {
+                if preferencesLoaded {
+                    if let failure = await preferencesWriter.retry(preferences) {
+                        preferencesSaveFailed(failure)
+                        return
+                    }
+                } else {
+                    // Never save the default in-memory model over an unreadable
+                    // startup file. Load and validate the original first.
+                    let loaded = try await preferencesWriter.reload(from: store)
+                    guard !Task.isCancelled, !stopped else { return }
+                    preferences = loaded
+                    preferencesLoaded = true
+                    setupFlow = SetupFlow(
+                        hasCompletedSetup: loaded.hasCompletedSetup, permissionGranted: AXIsProcessTrusted(),
+                        automaticallySetUpDevices: loaded.automaticallySetUpDevices)
+                    preferences.launchAtLogin = SMAppService.mainApp.status == .enabled
+                    access.distrustIdentifiers(loaded.ambiguousIdentityKeys)
+                    AppPresence.shared.hideDockWhenClosed = loaded.hideDockWhenClosed
+                    AppIcon.update(paused: loaded.paused)
+                }
+                guard !Task.isCancelled, !stopped else { return }
+                settingsStorageError = nil
+                syncCatalog()
+                reconcileCatalogSelection()
+                // Discovery or a pause action may have updated the model while
+                // retrying. Keep those newer changes after the recovered write.
+                persist()
+                apply(retry: true)
+            } catch {
+                preferencesSaveFailed(error.localizedDescription)
+            }
+        }
     }
 
     private func apply(retry: Bool = false) {
@@ -1016,7 +1072,7 @@ final class AppModel {
         permissionRecoveryPending = false
         if !storageHealthy {
             status = "Settings need attention"
-            detail = errorMessage ?? "Device control is paused because settings could not be saved."
+            detail = "Device control is paused. " + (settingsStorageError ?? "Settings could not be saved.")
             if let issue = pointer?.error { detail += " " + issue }
             return
         } else if let issue = pointer?.error {
@@ -1084,6 +1140,7 @@ final class AppModel {
         guard !stopped else { return }
         inputEditCommit.flush()
         stopped = true
+        settingsRecoveryTask?.cancel()
         accessibilityFocusTask?.cancel()
         refreshTask?.cancel()
         timer?.invalidate()

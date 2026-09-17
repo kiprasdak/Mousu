@@ -31,6 +31,37 @@ enum MainWindowSize {
 }
 
 @MainActor
+private struct SettingsStorageNotice: View {
+    @Bindable var model: AppModel
+
+    var body: some View {
+        if let message = model.settingsStorageError {
+            VStack(alignment: .leading, spacing: 7) {
+                HStack {
+                    Label("Settings unavailable", systemImage: "exclamationmark.triangle")
+                        .font(.system(size: 13, weight: .semibold))
+                    Spacer(minLength: 12)
+                    Button(model.retryingSettingsStorage ? "Retrying…" : "Retry") {
+                        model.retrySettingsStorage()
+                    }
+                    .disabled(model.retryingSettingsStorage || !model.canRetrySettingsStorage)
+                }
+                Text("Device control is paused until your settings can be read and saved.")
+                    .font(.system(size: 12))
+                Text(message)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.orange.opacity(0.09))
+        }
+    }
+}
+
+@MainActor
 struct MainView: View {
     @Bindable var model: AppModel
     @Environment(\.displayScale) private var displayScale
@@ -52,6 +83,9 @@ struct MainView: View {
             } else {
                 PermissionOnboarding(model: model)
             }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            SettingsStorageNotice(model: model)
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .tint(Palette.blue)
@@ -631,7 +665,7 @@ private struct DeviceEditor: View {
     private var settingsAccent: Color { settingsPaused ? .gray : Palette.blue }
 
     private var inputEditingDisabled: Bool {
-        settingsPaused || !model.bridgeAvailable
+        settingsPaused || !model.bridgeAvailable || !model.canOrganizeDevices
     }
 
     var body: some View {
@@ -2107,6 +2141,9 @@ struct MenuPanel: View {
                 }
             }
         }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            SettingsStorageNotice(model: model)
+        }
         .frame(width: 400)
         .modifier(CatalogDragOverlay(model: model))
         .background(MenuPanelWindowReader(reference: panelWindow).frame(width: 0, height: 0))
@@ -2383,7 +2420,7 @@ struct MenuPanel: View {
                                         .onHover { hoveringReset = $0 }
                                         .help("Reset movement and scrolling settings")
                                         .accessibilityLabel("Reset device settings")
-                                        .disabled(settingsPaused || !model.bridgeAvailable)
+                                        .disabled(settingsPaused || !model.bridgeAvailable || !model.canOrganizeDevices)
                                         .alignmentGuide(.deviceActionCenter) { $0[VerticalAlignment.center] }
                                     }
 
@@ -2462,7 +2499,7 @@ struct MenuPanel: View {
                                     .font(.system(size: 11)).foregroundStyle(.secondary)
                                 }
                             }
-                            .disabled(settingsPaused || !model.bridgeAvailable)
+                            .disabled(settingsPaused || !model.bridgeAvailable || !model.canOrganizeDevices)
                         }
                         .modifier(PausedSettingsAppearance(isPaused: settingsPaused))
                     }

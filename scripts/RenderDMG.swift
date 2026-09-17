@@ -8,6 +8,9 @@ guard arguments.count == 3 else {
     fatalError("Usage: RenderDMG.swift app-path output-directory")
 }
 let app = URL(fileURLWithPath: arguments[1])
+guard let version = Bundle(url: app)?.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String else {
+    fatalError("App bundle is missing its version")
+}
 let output = URL(fileURLWithPath: arguments[2], isDirectory: true)
 let ink = NSColor(srgbRed: 0.125, green: 0.137, blue: 0.165, alpha: 1)
 let muted = NSColor(srgbRed: 0.416, green: 0.439, blue: 0.486, alpha: 1)
@@ -104,7 +107,7 @@ func render(scale: Int, preview: Bool) -> NSBitmapImageRep {
     blue.withAlphaComponent(0.75).setStroke()
     outgoing.stroke()
     text(
-        "0.9 beta 2  ·  macOS 26+  ·  Apple Silicon", y: 80, size: 12,
+        "\(version) beta  ·  macOS 26+  ·  Apple Silicon", y: 80, size: 12,
         weight: .regular, color: muted)
 
     if preview {
